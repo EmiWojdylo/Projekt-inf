@@ -1,0 +1,177 @@
+import csv
+import os
+import time
+from psychopy import visual, event, core, sound, logging, gui
+from psychopy.visual import ButtonStim
+import random
+
+
+
+# Dzialania mat
+def generate_math_problem():
+    while True:
+        op1 = random.choice(['*', '/'])
+        op2 = random.choice(['+', '-'])
+        a = random.randint(1, 9)
+        b = random.randint(1, 9)
+        c = random.randint(1, 9)
+        try:
+            if op1 == '*':
+                first = a * b
+            else:
+                if b == 0 or a % b != 0:
+                    continue
+                first = a // b
+            if op2 == '+':
+                result = first + c
+            else:
+                result = first - c
+            if 1 <= result <= 9:
+                is_correct = random.choice([True, False])
+                displayed_result = result
+                if not is_correct:
+                    offset = random.choice([-2, -1, 1, 2])
+                    displayed_result = max(1, min(9, result + offset))
+                    if displayed_result == result:
+                        continue
+                expression = f"({a} {op1} {b}) {op2} {c} ="
+                result_only = f"{displayed_result}"
+                return expression, result_only, is_correct
+        except ZeroDivisionError:
+            continue
+
+def show_math_problem(win, expression, result_only, is_result_correct):
+    eq_text = visual.TextStim(win, text=expression, height=40, color='black', pos=(0, 0))
+    eq_text.draw()
+    win.flip()
+    core.wait(2.0)
+
+    result_text = visual.TextStim(win, text=result_only, height=40, color='black', pos=(0, 100))
+    true_button = ButtonStim(
+        win, text="Prawda", pos=(-150, -50), size=(200, 80),
+        letterHeight=30, color='white', fillColor='dimgray', borderColor='white')
+    false_button = ButtonStim(
+        win, text="Falsz", pos=(150, -50), size=(200, 80),
+        letterHeight=30, color='white', fillColor='dimgray', borderColor='white')
+
+    mouse = event.Mouse()
+
+    while True:
+        result_text.draw()
+        true_button.draw()
+        false_button.draw()
+        win.flip()
+
+        if mouse.getPressed()[0]:
+            if true_button.contains(mouse):
+                return is_result_correct is True
+            elif false_button.contains(mouse):
+                return is_result_correct is False
+
+letters = list("FHJKLNPQRSTY")
+
+# Przyciski wyboru liter
+letters_choice = ["F", "H", "K", "L", "M", "N", "R", "S", "T", "W", "X", "Z"]
+button_grid = []
+button_size = (100, 60)
+start_x = -150
+start_y = 100
+cols = 3
+
+for i in range(len(letters_choice)):
+    row = i // cols
+    col = i % cols
+    x = start_x + col * 150
+    y = start_y - row * 100
+    button = ButtonStim(win, text=letters_choice[i], pos=(x, y), letterHeight=30, color='black',
+                        size=button_size, fillColor='dimgray', borderColor='black')
+    button_grid.append((button, letters_choice[i]))
+
+question_button = ButtonStim(win, text="?", pos=(start_x + 150, start_y - 4 * 100),
+                             letterHeight=30, color='black', size=button_size,
+                             fillColor='dimgray', borderColor='black')
+delete_button = ButtonStim(
+    win, text="Wyczysc", pos=(start_x + 2 * 150, start_y - 5 * 100),
+    letterHeight=30, color='white', size=button_size, fillColor='dimgray', borderColor='white')
+
+response_text = visual.TextStim(win, text="", pos=(0, 250), color='black', height=30)
+instr = visual.TextStim(win, text="""Zaznacz litery w kolejności, w jakiej je widziałeś/widziałaś. \
+    Jeżeli nie pamiętasz którejś z liter, wstaw w jej miejsce znak zapytania. \
+    \nAby zatwierdzić, naciśnij ENTER.""",
+    pos=(0, 300), color='black', height=20, wrapWidth=700)
+
+# Zapis wyników
+output_file = "ospan_wyniki.csv"
+if not os.path.exists(output_file):
+    with open(output_file, mode='w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["blok", "set_size", "poprawne_litery", "poprawne_dzialania (%)", "sredni_rt (s)"])
+
+def ospan_blok(block_num, set_size, output_file, block_label):
+    sequence = []
+    response = ""
+    math_correct_count = 0
+    math_rts = []
+
+    for i in range(set_size):
+        # Litera
+        show_fixation_cross(win, duration=1.0)
+        letter = random.choice(letters)
+        sequence.append(letter)
+        text_stim.text = letter
+        text_stim.draw()
+        win.flip()
+        core.wait(0.8)
+
+        # Działanie matematyczne
+        expression, result_only, is_result_correct = generate_math_problem()
+        start_time = time.time()
+        is_answer_correct = show_math_problem(win, expression, result_only, is_result_correct)
+        rt = time.time() - start_time
+        math_rts.append(rt)
+        if is_answer_correct:
+            math_correct_count += 1
+
+    # Ekran odpowiedzi
+    while True:
+        instr.draw()
+        response_text.text = "Odpowiedź: " + response
+        response_text.draw()
+
+        for btn, _ in button_grid:
+            btn.draw()
+        question_button.draw()
+        delete_button.draw()
+        win.flip()
+
+        mouse = event.Mouse()
+        keys = event.getKeys()
+
+        if "return" in keys or "enter" in keys:
+            break
+
+        if mouse.getPressed()[0]:
+            for btn, letter in button_grid:
+                if btn.contains(mouse):
+                    response += letter
+                    core.wait(0.2)
+            if question_button.contains(mouse):
+                response += "?"
+                core.wait(0.2)
+            if delete_button.contains(mouse) and len(response) > 0:
+                response = response[:-1]
+                core.wait(0.2)
+
+    # Ewaluacja i zapis
+    correct_letters = sum([1 for i in range(len(sequence)) if i < len(response) and response[i] == sequence[i]])
+    math_accuracy = round((math_correct_count / set_size) * 100)
+    avg_rt = round(sum(math_rts) / len(math_rts), 3)
+
+    with open(output_file, mode='a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow([block_label, block_num, set_size, correct_letters, math_accuracy, avg_rt])
+
+    feedback_text = f"Poprawnie przywołane litery: {correct_letters}/{set_size}\n" \
+                    f"Poprawność działań matematycznych: {math_accuracy}%\n" \
+                    "Naciśnij SPACJĘ, aby przejść dalej."
+    show_text_and_wait(feedback_text)
