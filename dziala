@@ -1,13 +1,135 @@
+# to do: dynamizacja, zintegrowanie z dzwiekami i pkt fiksacji, zintegroewanie z configiem, zintegrowanie instrukcji z plików, opisanie,
+# klilki do słuchania, zapisywanie i finito. W razie dodatkowego czasu milisekundowa precyzja
+
 import csv
 import os
 import time
-from psychopy import visual, event, core, sound, logging, gui
+from psychopy import visual, core, event, sound, gui, data
 from psychopy.visual import ButtonStim
 import random
 
+#Konfiguracja okna (bez fullscreena, bo na macu nie dziala)
+win = visual.Window(size=(1440, 900), color='silver', units='pix') #do zmiany fullscr=True
+slider_duration = 8.0  # maksymalny czas na odpowiedź
+
+#Tekst
+text_stim = visual.TextStim(win=win, text='', color='black', height=40, wrapWidth=1000)
+
+#Funkcja prezentujaca tekst (i czekajaca na klawisz)
+def show_text_and_wait(text):
+    text_stim.text = text
+    text_stim.draw()
+    win.flip()
+    event.waitKeys()
+    
+#Dane uczestnika
+info = {'ID': '', 'Wiek': '', 'Plec':''}
+
+dlg = gui.DlgFromDict(info, title='Eksperyment OSPAN_Click')
+if not dlg.OK:
+    core.quit()
+
+participant_id = info['ID']
+
+#punkt fiksacji
+def show_fixation_cross(win, duration=5.0):
+    fixation = visual.TextStim(
+        win, text='+', height=50, color='black', pos=(0, 0))
+    fixation.draw()
+    win.flip()
+    core.wait(duration)
+   
+#PLIKI CSV Z DANYMI 
+output_file_k = 'klik_data.csv'
+output_file_o = "ospan_wyniki.csv"
+
+#plik do dźwięku
+#block_type to eksperyment/trial, dur_t to czas trwania dźwięku, resp to odpowiedz
+if not os.path.exists(output_file_k):
+    with open(output_file_k, mode='w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            'id', 'trial', 'block_type',
+            'dur_t', 'resp', 'rt'
+        ])
+
+#plik do ospan
+if not os.path.exists(output_file_o):
+    with open(output_file_o, mode='w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["blok", "set_size", "poprawne_litery", "poprawne_dzialania (%)", "sredni_rt (s)"])
+
+#INSTRUKCJE
+instrukcja_skala_dzwieki = visual.TextStim(win, text="Oszacuj czas trwania dźwięków:", pos=(0, 0.3), color='black')
+
+#ELEMENTY CZĘŚĆI DŹWIĘKOWEJ
+
+#Skala do oszacowania czasu
+time_slider = visual.Slider(
+    win, ticks=(2, 3, 4, 5, 6, 7, 8),
+    labels=['2s', '3s', '4s', '5s', '6s', '7s', '8s'],
+    size=(1000, 60), pos=(0, -200),
+    granularity=0.1, style='rating', color='black',
+    labelColor='black', markerColor='black', units='pix')
+
+#Dźwięk
+klik_dzwiek = sound.Sound("s8.wav")
+
+def tylko_dzwiek():
+    # Odtwarzanie klików
+    klik_dzwiek.setVolume(1.0)
+    show_fixation_cross(win, duration=20.0)
+    win.flip()
+    klik_dzwiek.play()
+    core.wait(duration_s)
+    klik_dzwiek.stop()
+
+#Funkcja: jedna próba klikowa
+def jedna_proba_click(seria_num, duration_s, output_file_k, block_type):
+    # Odtwarzanie klików
+    klik_dzwiek.setVolume(1.0)
+    show_fixation_cross(win, duration=5.0)
+    win.flip()
+    klik_dzwiek.play()
+    core.wait(duration_s)
+    klik_dzwiek.stop()
+
+    # Skala odpowiedzi
+    time_slider.reset()
+    instrukcja_skala_dzwieki.draw()
+    time_slider.draw()
+    win.flip()
+
+    timer = core.Clock()
+    rt = None
+    response = None
+
+    while timer.getTime() < slider_duration:
+        if event.getKeys(['escape']):
+            core.quit()
+        time_slider.draw()
+        instrukcja_skala_dzwieki.draw()
+        win.flip()
+        if time_slider.getRating() is not None and rt is None:
+            rt = timer.getTime()
+            response = time_slider.getRating()
+            break
+
+    # Zapis do CSV
+    with open(output_file_k, mode='a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            participant_id, seria_num, block_type,
+            duration_s, response, rt
+        ])
+
+    # Przerwa między próbami
+    core.wait(0.5)
 
 
-# Dzialania mat
+#ELEMENTY CZĘŚCI OSPAN
+
+#Dzialania matematyczne
 def generate_math_problem():
     while True:
         op1 = random.choice(['*', '/'])
@@ -39,13 +161,17 @@ def generate_math_problem():
                 return expression, result_only, is_correct
         except ZeroDivisionError:
             continue
-
+            
+#wyświetlanie zadania matematycznego
 def show_math_problem(win, expression, result_only, is_result_correct):
+    
+    # Tekst działania matematycznego
     eq_text = visual.TextStim(win, text=expression, height=40, color='black', pos=(0, 0))
     eq_text.draw()
     win.flip()
     core.wait(2.0)
-
+    
+    # Sam wynik i przyciski P F
     result_text = visual.TextStim(win, text=result_only, height=40, color='black', pos=(0, 100))
     true_button = ButtonStim(
         win, text="Prawda", pos=(-150, -50), size=(200, 80),
@@ -67,52 +193,56 @@ def show_math_problem(win, expression, result_only, is_result_correct):
                 return is_result_correct is True
             elif false_button.contains(mouse):
                 return is_result_correct is False
-
+                
+#litery
 letters = list("FHJKLNPQRSTY")
 
-# Przyciski wyboru liter
-letters_choice = ["F", "H", "K", "L", "M", "N", "R", "S", "T", "W", "X", "Z"]
+# Litery do wyboru
+letters_k = ["F", "H", "J", "K", "L", "N", "P", "Q", "R", "S", "T", "Y"]
+response = ""
+
+# Pozycje przycisków: 3 kolumny x 4 rzędy
 button_grid = []
 button_size = (100, 60)
 start_x = -150
 start_y = 100
 cols = 3
+rows = 4
 
-for i in range(len(letters_choice)):
+# Tworzenie 12 przycisków z literami
+for i in range(len(letters)):
     row = i // cols
     col = i % cols
     x = start_x + col * 150
     y = start_y - row * 100
-    button = ButtonStim(win, text=letters_choice[i], pos=(x, y), letterHeight=30, color='black',
+    button = ButtonStim(win, text=letters[i], pos=(x, y), letterHeight=30, color='black',
                         size=button_size, fillColor='dimgray', borderColor='black')
-    button_grid.append((button, letters_choice[i]))
+    button_grid.append((button, letters_k[i]))
 
-question_button = ButtonStim(win, text="?", pos=(start_x + 150, start_y - 4 * 100),
+    # znak zapytania
+    question_button = ButtonStim(win, text="?", pos=(start_x + 150, start_y - 4 * 100),
                              letterHeight=30, color='black', size=button_size,
                              fillColor='dimgray', borderColor='black')
-delete_button = ButtonStim(
-    win, text="Wyczysc", pos=(start_x + 2 * 150, start_y - 5 * 100),
-    letterHeight=30, color='white', size=button_size, fillColor='dimgray', borderColor='white')
+    #przycisk delete
+    delete_button = ButtonStim(
+        win, text="DEL", pos=(start_x + 3 * 150, start_y - 3 * 100),
+        letterHeight=30, color='black',
+        size=button_size, fillColor='dimgray', borderColor='white')
 
+# Tekst pokazujący odpowiedź
 response_text = visual.TextStim(win, text="", pos=(0, 250), color='black', height=30)
-instr = visual.TextStim(win, text="""Zaznacz litery w kolejności, w jakiej je widziałeś/widziałaś. \
-    Jeżeli nie pamiętasz którejś z liter, wstaw w jej miejsce znak zapytania. \
-    \nAby zatwierdzić, naciśnij ENTER.""",
-    pos=(0, 300), color='black', height=20, wrapWidth=700)
 
-# Zapis wyników
-output_file = "ospan_wyniki.csv"
-if not os.path.exists(output_file):
-    with open(output_file, mode='w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(["blok", "set_size", "poprawne_litery", "poprawne_dzialania (%)", "sredni_rt (s)"])
+# Instrukcja
+instr = visual.TextStim(win, text="Zaznacz litery w kolejności, w jakiej je widziałeś/widziałaś. Jeżeli nie pamiętasz którejś z liter, wstaw w jej miejsce znak zapytania. \nAby zatwierdzić, naciśnij ENTER.", 
+                        pos=(0, 300), color='black', height=20, wrapWidth=700)
 
-def ospan_blok(block_num, set_size, output_file, block_label):
+#funkcja - działanie ospan
+def ospan_blok(block_num, set_size, output_file_o, block_label):
     sequence = []
     response = ""
     math_correct_count = 0
     math_rts = []
-
+    
     for i in range(set_size):
         # Litera
         show_fixation_cross(win, duration=1.0)
@@ -167,7 +297,7 @@ def ospan_blok(block_num, set_size, output_file, block_label):
     math_accuracy = round((math_correct_count / set_size) * 100)
     avg_rt = round(sum(math_rts) / len(math_rts), 3)
 
-    with open(output_file, mode='a', newline='') as f:
+    with open(output_file_o, mode='a', newline='') as f:
         writer = csv.writer(f)
         writer.writerow([block_label, block_num, set_size, correct_letters, math_accuracy, avg_rt])
 
@@ -175,3 +305,48 @@ def ospan_blok(block_num, set_size, output_file, block_label):
                     f"Poprawność działań matematycznych: {math_accuracy}%\n" \
                     "Naciśnij SPACJĘ, aby przejść dalej."
     show_text_and_wait(feedback_text)
+
+#odpowiedź - jakie litery widziałeś?
+response_text = visual.TextStim(win, text="", pos=(0, 250), color='black', height=30)
+instr = visual.TextStim(win, text="""Zaznacz litery w kolejności, w jakiej je widziałeś/widziałaś. \
+    Jeżeli nie pamiętasz którejś z liter, wstaw w jej miejsce znak zapytania. \
+    \nAby zatwierdzić, naciśnij ENTER.""",
+    pos=(0, 300), color='black', height=20, wrapWidth=700)
+
+
+#PĘTLA TRENINGOWA
+
+show_text_and_wait(
+    "Ta część eksperymentu polega wysłuchaniu serii dzwiękow. Za chwilę usłyszysz dźwięk. Przysłuchuj mu się uważnie oraz wpatruj się w krzyżyk na ekranie. \nNaciśnij SPACJĘ, aby przejść dalej.")
+tylko_dzwiek()
+
+
+
+#kliki
+show_text_and_wait("Ta część eksperymentu polega na oszacowaniu długości trwania dźwięku. Za chwilę usłyszysz dźwięk. Potem zostaniesz poproszony o oszacowanie długości jego trwania. \nNaciśnij SPACJĘ, aby przejść dalej.")
+for i in range(2):
+    losowa_dl = random.choice([2, 3, 4, 5, 6, 7, 8])
+    jedna_proba_click(seria_num=i+1, duration_s=losowa_dl, output_file_k=output_file_k, block_type='trening')
+
+#trening ospan
+# Instrukcja wstepna
+show_text_and_wait("W tej części eksperymentu Twoim zadaniem będzie wykonywanie prostych obliczeń oraz zapamiętywanie wyświetlonych po nich liter. Następnie zaznacz litery w takiej kolejności, w jakiej zostały pokazane. Jeżeli zapomnisz którąś z liter, wstaw w jej miejsce znak zapytania. Staraj się wykonywać zadanie tak szybko i dokładnie, jak potrafisz. Równania rozwiązuj w myślach zanim przejdziesz do ekranu, na którym określisz, czy podany wynik jest prawdziwy czy fałszywy. \nNaciśnij SPACJĘ, aby przejść dalej.")
+set_size_e = 3
+block_num=1
+ospan_blok(block_num, set_size_e, output_file_o=output_file_o, block_label="trening")
+        
+
+#SESJA EKSPERYMENTALNA
+# Instrukcja wstepna
+show_text_and_wait("W tej części obowiązują Cię te same zasady. Najpierw usłyszysz dźwięki, potem pojawią się zadania matematyczne. \nNaciśnij SPACJĘ, aby przejść dalej.")
+for i in range(15):
+    losowa_dl = random.choice([2, 3, 4, 5, 6, 7, 8])
+    jedna_proba_click(seria_num=i+1, duration_s=losowa_dl, output_file_k=output_file_k, block_type='eksperyment')
+    trials_amount_e = [4, 6, 3, 5, 7, 6, 5, 3, 4, 5, 7, 4, 4, 7, 5]
+    set_size_e = random.randint(2, 7)
+    ospan_blok(block_num, set_size_e, output_file_o, "eksperyment")
+
+
+show_text_and_wait("Koniec eksperymentu. Dziękujemy za udział!")
+win.close()
+core.quit()
