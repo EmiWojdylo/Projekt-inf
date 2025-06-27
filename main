@@ -5,7 +5,8 @@ import os
 
 
 
-win = visual.Window(fullscr=True, color='lightgrey')
+win = visual.Window(size=(1440, 900), color='silver', units='pix', fullscr=True)
+text_stim = visual.TextStim(win=win, text='', color='black', height=40, wrapWidth=1000)
 
 
 ###Dane uczestnika
