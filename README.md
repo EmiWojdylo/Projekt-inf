@@ -19,6 +19,8 @@ Przed główną częścią:
 Przed każdą swrią równań pojawiają się dźwięki. Przysłuchuj się im uważnie, utrzymując wzrok na punkcie fiksacji.
 Naciśnij spację, aby przejść do zadania"
 # autorzy
-Emilia Wojdyło
-Aleksandra Olszanowska
+Emilia Wojdyło,
+
+Aleksandra Olszanowska,
+
 Olga Śmieja
