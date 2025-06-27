@@ -75,7 +75,8 @@ def read_text_from_file(file_name: str, insert: str = '') -> str:
 
 instrukcja_po_uruchomieniu_procedury_1 = read_text_from_file('po_uruchomieniu_procedury_cz1.txt', insert=participant_id)
 instrukcja_po_uruchomieniu_procedury_2 =  read_text_from_file('po_uruchomieniu_procedury_cz2.txt', insert=participant_id)
-przed_sesja_oszacowania = read_text_from_file('przed_sesja_oszacowania.txt', insert=participant_id)
+instrukcja_przed_sesja_oszacowania = read_text_from_file('przed_sesja_oszacowania.txt', insert=participant_id)
+instrukcja_przed_glowna_czescia =read_text_from_file('przed_glowna_czescia.txt', insert=participant_id)
 
 
 def check_exit(key: str = 'f7') -> None:
