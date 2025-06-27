@@ -4,7 +4,7 @@ import csv
 import os
 
 
-
+###Ustawienia wizualne
 win = visual.Window(size=(1440, 900), color='silver', units='pix', fullscr=True)
 text_stim = visual.TextStim(win=win, text='', color='black', height=40, wrapWidth=1000)
 
@@ -21,7 +21,11 @@ participant_id = info['ID']
 
 output_file = 'klik_data.csv'
 
-###Plik: block_type to eksperyment/trial, dur_t to czas trwania dźwięku, resp to odpowiedz
+###Objaśnienie zmiennych w pliku wyjściowym (output_file): 
+##block_type - eksperyment/trial
+##dur_t - czas trwania dźwięku
+##resp - odpowiedź uczestnika
+
 if not os.path.exists(output_file):
     with open(output_file, mode='w', newline='') as f:
         writer = csv.writer(f)
@@ -30,7 +34,7 @@ if not os.path.exists(output_file):
             'dur_t', 'resp', 'rt'
         ])
 
-###Skala do szacowania czasu
+###Skala do szacowania czasu - od 2 do 8 sekund - tylko pełne sekundy
 slider_duration = 8.0  #timeout dla odpowiedzi
 time_slider = visual.Slider(
     win, ticks=(2, 3, 4, 5, 6, 7, 8),
@@ -40,12 +44,13 @@ time_slider = visual.Slider(
     labelColor='black', markerColor='black'
 )
 
-###Punkt fiksacji z czasem wyświetlania
+###Punkt fiksacji (wyświetlany 1,5 sekundy)
 duration = 1.5
 fixation = visual.TextStim(win, text='+', height=0.1, color='black', pos=(0, 0))
 
 
-###instrukcje
+###Instrukcje z podziałem na etapy
+##instrukcja_x, gdzie x to nazwa etapu, którego instrukcja dotyczy
 
 
 instrukcja_skala_dzwieki = visual.TextStim(win, text="""Oszacuj czas trwania dźwięków:
