@@ -5,7 +5,7 @@ from psychopy import visual, core, event, sound, gui, data
 from psychopy.visual import ButtonStim
 import random
 
-# Konfiguracja okna (bez fullscreena, bo na macu nie dziala)
+# Ustawienie okna (bez fullscreena, bo na macu nie dziala)
 win = visual.Window(size=(1440, 900), color='silver', units='pix')  # do zmiany fullscr=True
 slider_duration = 8.0  # maksymalny czas na odpowiedź
 
@@ -13,7 +13,7 @@ slider_duration = 8.0  # maksymalny czas na odpowiedź
 text_stim = visual.TextStim(win=win, text='', color='black', height=40, wrapWidth=1000)
 
 
-# Funkcja prezentujaca tekst (i czekajaca na klawisz)
+# Funkcja ktora, prezentuje tekst (i czeka na klawisz)
 def show_text_and_wait(text):
     text_stim.text = text
     text_stim.draw()
@@ -108,6 +108,7 @@ def jedna_proba_click(seria_num, duration_s, output_file_k, block_type):
     klik_dzwiek.stop()
 
     # Skala odpowiedzi
+    # Zdecydowałyśmy się ponieważ będzie bardziej zrozumiała i czytelna dla uczestnika
     time_slider.reset()
     instrukcja_skala_dzwieki.draw()
     time_slider.draw()
@@ -184,7 +185,7 @@ def show_math_problem(win, expression, result_only, is_result_correct):
     win.flip()
     core.wait(2.0)
 
-    # Sam wynik i przyciski P F
+    # wynik i przyciski P F
     result_text = visual.TextStim(win, text=result_only, height=40, color='black', pos=(0, 100))
     true_button = ButtonStim(
         win, text="Prawda", pos=(-150, -50), size=(200, 80),
@@ -215,7 +216,7 @@ letters = list("FHJKLNPQRSTY")
 letters_k = ["F", "H", "J", "K", "L", "N", "P", "Q", "R", "S", "T", "Y"]
 response = ""
 
-# Pozycje przycisków: 3 kolumny x 4 rzędy
+# Pozycje przycisków
 button_grid = []
 button_size = (100, 60)
 start_x = -150
@@ -223,7 +224,7 @@ start_y = 100
 cols = 3
 rows = 4
 
-# Tworzenie 12 przycisków z literami
+# Tworzenie przycisków z literami
 for i in range(len(letters)):
     row = i // cols
     col = i % cols
@@ -308,7 +309,7 @@ def ospan_blok(block_num, set_size, output_file_o, block_label):
                 response = response[:-1]
                 core.wait(0.2)
 
-    # Ewaluacja i zapis
+    # Poprawność odpowiedzi i zapis
     correct_letters = sum([1 for i in range(len(sequence)) if i < len(response) and response[i] == sequence[i]])
     math_accuracy = round((math_correct_count / set_size) * 100)
     avg_rt = round(sum(math_rts) / len(math_rts), 3)
@@ -323,7 +324,7 @@ def ospan_blok(block_num, set_size, output_file_o, block_label):
     show_text_and_wait(feedback_text)
 
 
-# odpowiedź - jakie litery widziałeś?
+# odpowiedź (litery)
 response_text = visual.TextStim(win, text="", pos=(0, 250), color='black', height=30)
 instr = visual.TextStim(win, text="""Zaznacz litery w kolejności, w jakiej je widziałeś/widziałaś. \
     Jeżeli nie pamiętasz którejś z liter, wstaw w jej miejsce znak zapytania. \
